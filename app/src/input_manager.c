@@ -384,6 +384,19 @@ sc_input_manager_process_key(struct sc_input_manager *im,
         }
     }
 
+    // hack to enter Swedish aring - via clipboard
+    if ((keycode == 229) && down) {
+        char *text = malloc(3);
+        text[0] = 0xC3;
+        text[1] = (shift) ? 0x85 : 0xA5;
+        text[2] = '\0';
+        SDL_SetClipboardText(text);
+        set_device_clipboard(controller, true,
+                             SC_SEQUENCE_INVALID);
+        free(text);
+        return;
+    }
+
     if (is_shortcut) {
         enum sc_action action = down ? SC_ACTION_DOWN : SC_ACTION_UP;
         switch (sdl_keycode) {
