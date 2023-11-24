@@ -15,6 +15,7 @@ SCRCPY_DEBUG=false
 SCRCPY_VERSION_NAME=2.3
 
 PLATFORM=${ANDROID_PLATFORM:-34}
+PLATFORM_DIR="$ANDROID_HOME/platforms/android-$PLATFORM"
 BUILD_TOOLS=${ANDROID_BUILD_TOOLS:-34.0.0}
 BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/$BUILD_TOOLS"
 
@@ -29,6 +30,14 @@ LAMBDA_JAR="$BUILD_TOOLS_DIR/core-lambda-stubs.jar"
 echo "Platform: android-$PLATFORM"
 echo "Build-tools: $BUILD_TOOLS"
 echo "Build dir: $BUILD_DIR"
+
+# Prevent "error: Unable to find package java.lang in platform classes"
+if [ ! -d "$PLATFORM_DIR" ]; then
+  echo
+  echo "Platform $PLATFORM is not installed. Possible solution:"
+  echo "sdkmanager --install \"platforms;android-$PLATFORM\""
+  exit
+fi
 
 rm -rf "$CLASSES_DIR" "$GEN_DIR" "$BUILD_DIR/$SERVER_BINARY" classes.dex
 mkdir -p "$CLASSES_DIR"
