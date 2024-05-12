@@ -393,8 +393,7 @@ sc_input_manager_process_key(struct sc_input_manager *im,
         text[1] = (shift) ? 0x85 : 0xA5;
         text[2] = '\0';
         SDL_SetClipboardText(text);
-        set_device_clipboard(controller, true,
-                             SC_SEQUENCE_INVALID);
+        set_device_clipboard(im, true, SC_SEQUENCE_INVALID);
         free(text);
         SDL_SetClipboardText(actual_clipboard);
         SDL_free(actual_clipboard);
