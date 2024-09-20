@@ -386,7 +386,7 @@ sc_input_manager_process_key(struct sc_input_manager *im,
 
     // hack to enter Swedish aring - via clipboard
     // the actual clipboard is preserved
-    if ((keycode == 229) && down) {
+    if ((sdl_keycode == 229) && down) {
         char *actual_clipboard = SDL_GetClipboardText();
         char *text = malloc(3);
         text[0] = 0xC3;
