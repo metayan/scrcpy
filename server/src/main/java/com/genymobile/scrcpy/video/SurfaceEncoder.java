@@ -5,6 +5,11 @@ import com.genymobile.scrcpy.AsyncProcessor;
 import com.genymobile.scrcpy.device.ConfigurationException;
 import com.genymobile.scrcpy.device.Size;
 import com.genymobile.scrcpy.device.Streamer;
+import com.genymobile.scrcpy.opengl.AffineOpenGLFilter;
+import com.genymobile.scrcpy.opengl.AffineTransform;
+import com.genymobile.scrcpy.opengl.OpenGLException;
+import com.genymobile.scrcpy.opengl.OpenGLFilter;
+import com.genymobile.scrcpy.opengl.OpenGLRunner;
 import com.genymobile.scrcpy.util.Codec;
 import com.genymobile.scrcpy.util.CodecOption;
 import com.genymobile.scrcpy.util.CodecUtils;
@@ -76,19 +81,36 @@ public class SurfaceEncoder implements AsyncProcessor {
             do {
                 reset.consumeReset(); // If a capture reset was requested, it is implicitly fulfilled
                 capture.prepare();
-                Size size = capture.getSize();
+                Size inputSize = capture.getSize();
+                Size outputSize = inputSize; //.rotate();
+
                 if (!headerWritten) {
-                    streamer.writeVideoHeader(size);
+                    streamer.writeVideoHeader(outputSize);
                     headerWritten = true;
                 }
 
-                format.setInteger(MediaFormat.KEY_WIDTH, size.getWidth());
-                format.setInteger(MediaFormat.KEY_HEIGHT, size.getHeight());
+                format.setInteger(MediaFormat.KEY_WIDTH, outputSize.getWidth());
+                format.setInteger(MediaFormat.KEY_HEIGHT, outputSize.getHeight());
 
+                OpenGLRunner runner = null;
                 Surface surface = null;
                 try {
                     mediaCodec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
                     surface = mediaCodec.createInputSurface();
+
+                    // The affine transform describes how we want to transform the input image.
+                    // The filter expects the matrix to transform the coordinates, which is the inverse transform.
+                    AffineTransform transform = AffineTransform.reframe(0.2f, 0.2f, 0.8f, 0.8f)
+                            .apply(AffineTransform.rotate(10).withAspectRatio(inputSize).fromCenter())
+                            .invert();
+                    //AffineTransform transform = AffineTransform.orient(1).fromCenter().invert();
+
+                    Ln.i("=== matrix=" + transform);
+                    float[] matrix = transform.to4x4();
+
+                    OpenGLFilter filter = new AffineOpenGLFilter(matrix);
+                    runner = OpenGLRunner.start(filter, inputSize, outputSize, surface);
+                    surface = runner.getInputSurface();
 
                     capture.start(surface);
 
@@ -113,19 +135,26 @@ public class SurfaceEncoder implements AsyncProcessor {
                     mediaCodec.stop();
                 } catch (IllegalStateException | IllegalArgumentException e) {
                     Ln.e("Encoding error: " + e.getClass().getName() + ": " + e.getMessage());
-                    if (!prepareRetry(size)) {
+                    if (!prepareRetry(outputSize)) {
                         throw e;
                     }
                     Ln.i("Retrying...");
                     alive = true;
                 } finally {
                     reset.setRunningMediaCodec(null);
+                    if (runner != null) {
+                        runner.stopAndRelease();
+                    }
                     mediaCodec.reset();
                     if (surface != null) {
                         surface.release();
                     }
                 }
             } while (alive);
+        } catch (OpenGLException e) {
+            Ln.e("OpenGL error", e);
+        } catch (InterruptedException e) {
+            // terminate without errors
         } finally {
             mediaCodec.release();
             capture.release();
