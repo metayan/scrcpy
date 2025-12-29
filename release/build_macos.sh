@@ -28,7 +28,6 @@ meson setup "$MACOS_BUILD_DIR" \
     -Dc_args="-I$DEPS_INSTALL_DIR/include" \
     -Dc_link_args="-L$DEPS_INSTALL_DIR/lib" \
     --buildtype=release \
-    --strip \
     -Db_lto=true \
     -Dcompile_server=false \
     -Dportable=true \

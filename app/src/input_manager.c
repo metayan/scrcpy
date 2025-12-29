@@ -615,14 +615,17 @@ sc_input_manager_process_key(struct sc_input_manager *im,
 static struct sc_position
 sc_input_manager_get_position(struct sc_input_manager *im, int32_t x,
                                                            int32_t y) {
+    LOGD("sc_input_manager_get_position ENTRY");
     if (im->mp->relative_mode) {
         // No absolute position
+        LOGE("sc_input_manager_get_position 1");
         return (struct sc_position) {
             .screen_size = {0, 0},
             .point = {0, 0},
         };
     }
 
+    LOGD("sc_input_manager_get_position 2");
     return (struct sc_position) {
         .screen_size = im->screen->frame_size,
         .point = sc_screen_convert_window_to_frame_coords(im->screen, x, y),
@@ -632,11 +635,13 @@ sc_input_manager_get_position(struct sc_input_manager *im, int32_t x,
 static void
 sc_input_manager_process_mouse_motion(struct sc_input_manager *im,
                                       const SDL_MouseMotionEvent *event) {
+    LOGD("sc_input_manager_process_mouse_motion ENTRY");
     if (event->which == SDL_TOUCH_MOUSEID) {
         // simulated from touch events, so it's a duplicate
         return;
     }
 
+    LOGD("sc_input_manager_process_mouse_motion 1");
     struct sc_mouse_motion_event evt = {
         .position = sc_input_manager_get_position(im, event->x, event->y),
         .pointer_id = im->vfinger_down ? SC_POINTER_ID_GENERIC_FINGER
@@ -646,12 +651,14 @@ sc_input_manager_process_mouse_motion(struct sc_input_manager *im,
         .buttons_state = im->mouse_buttons_state,
     };
 
+    LOGD("sc_input_manager_process_mouse_motion 2");
     assert(im->mp->ops->process_mouse_motion);
     im->mp->ops->process_mouse_motion(im->mp, &evt);
 
     // vfinger must never be used in relative mode
     assert(!im->mp->relative_mode || !im->vfinger_down);
 
+    LOGD("sc_input_manager_process_mouse_motion 3");
     if (im->vfinger_down) {
         assert(!im->mp->relative_mode); // assert one more time
         struct sc_point mouse =
@@ -662,6 +669,7 @@ sc_input_manager_process_mouse_motion(struct sc_input_manager *im,
                                                 im->vfinger_invert_y);
         simulate_virtual_finger(im, AMOTION_EVENT_ACTION_MOVE, vfinger);
     }
+    LOGD("sc_input_manager_process_mouse_motion EXIT");
 }
 
 static void

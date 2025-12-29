@@ -800,8 +800,10 @@ sc_screen_resize_to_pixel_perfect(struct sc_screen *screen) {
 
 bool
 sc_screen_handle_event(struct sc_screen *screen, const SDL_Event *event) {
+    LOGD("sc_screen_handle_event ENTRY");
     switch (event->type) {
         case SC_EVENT_SCREEN_INIT_SIZE: {
+	    LOGD("sc_screen_handle_event SC_EVENT_SCREEN_INIT_SIZE");
             // The initial size is passed via screen->frame_size
             bool ok = sc_screen_init_size(screen);
             if (!ok) {
@@ -811,6 +813,7 @@ sc_screen_handle_event(struct sc_screen *screen, const SDL_Event *event) {
             return true;
         }
         case SC_EVENT_NEW_FRAME: {
+	    LOGD("sc_screen_handle_event SC_EVENT_NEW_FRAME");
             bool ok = sc_screen_update_frame(screen);
             if (!ok) {
                 LOGE("Frame update failed\n");
@@ -819,6 +822,7 @@ sc_screen_handle_event(struct sc_screen *screen, const SDL_Event *event) {
             return true;
         }
         case SDL_WINDOWEVENT:
+	    LOGD("sc_screen_handle_event SDL_WINDOWEVENT");
             if (!screen->video
                     && event->window.event == SDL_WINDOWEVENT_EXPOSED) {
                 sc_screen_render_novideo(screen);
@@ -861,19 +865,25 @@ sc_screen_handle_event(struct sc_screen *screen, const SDL_Event *event) {
             return true;
     }
 
+    LOGD("sc_screen_handle_event 1");
     if (sc_screen_is_relative_mode(screen)
             && sc_mouse_capture_handle_event(&screen->mc, event)) {
         // The mouse capture handler consumed the event
         return true;
     }
 
-    sc_input_manager_handle_event(&screen->im, event);
+    LOGD("sc_screen_handle_event 2");
+    if (screen->rect.w && screen->rect.h) {
+        sc_input_manager_handle_event(&screen->im, event);
+    }
+    LOGD("sc_screen_handle_event EXIT");
     return true;
 }
 
 struct sc_point
 sc_screen_convert_drawable_to_frame_coords(struct sc_screen *screen,
                                            int32_t x, int32_t y) {
+    LOGD("sc_screen_convert_drawable_to_frame_coords ENTRY");
     assert(screen->video);
 
     enum sc_orientation orientation = screen->orientation;
@@ -884,9 +894,12 @@ sc_screen_convert_drawable_to_frame_coords(struct sc_screen *screen,
     // screen->rect must be initialized to avoid a division by zero
     assert(screen->rect.w && screen->rect.h);
 
+    LOGD("sc_screen_convert_drawable_to_frame_coords 1: screen->rect.w=%d, screen->rect.h=%d",
+	 screen->rect.w, screen->rect.h);
     x = (int64_t) (x - screen->rect.x) * w / screen->rect.w;
     y = (int64_t) (y - screen->rect.y) * h / screen->rect.h;
 
+    LOGD("sc_screen_convert_drawable_to_frame_coords 2");
     struct sc_point result;
     switch (orientation) {
         case SC_ORIENTATION_0:
@@ -924,12 +937,14 @@ sc_screen_convert_drawable_to_frame_coords(struct sc_screen *screen,
             break;
     }
 
+    LOGD("sc_screen_convert_drawable_to_frame_coords EXIT");
     return result;
 }
 
 struct sc_point
 sc_screen_convert_window_to_frame_coords(struct sc_screen *screen,
                                          int32_t x, int32_t y) {
+    LOGD("sc_screen_convert_window_to_frame_coords ENTRY");
     sc_screen_hidpi_scale_coords(screen, &x, &y);
     return sc_screen_convert_drawable_to_frame_coords(screen, x, y);
 }
@@ -938,10 +953,15 @@ void
 sc_screen_hidpi_scale_coords(struct sc_screen *screen, int32_t *x, int32_t *y) {
     // take the HiDPI scaling (dw/ww and dh/wh) into account
     int ww, wh, dw, dh;
+    LOGD("sc_screen_hidpi_scale_coords ENTRY");
     SDL_GetWindowSize(screen->window, &ww, &wh);
+    LOGD("sc_screen_hidpi_scale_coords 1");
     SDL_GL_GetDrawableSize(screen->window, &dw, &dh);
 
+    LOGD("sc_screen_hidpi_scale_coords 2");
     // scale for HiDPI (64 bits for intermediate multiplications)
     *x = (int64_t) *x * dw / ww;
+    LOGD("sc_screen_hidpi_scale_coords 3");
     *y = (int64_t) *y * dh / wh;
+    LOGD("sc_screen_hidpi_scale_coords EXIT");
 }
