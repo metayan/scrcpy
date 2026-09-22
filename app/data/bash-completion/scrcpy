@@ -202,7 +202,7 @@ _scrcpy() {
             return
             ;;
         --min-size-alignment)
-            COMPREPLY=($(compgen -> '1 2 4 8 16' -- "$cur"))
+            COMPREPLY=($(compgen -W '1 2 4 8 16' -- "$cur"))
             return
             ;;
         --audio-bit-rate \
